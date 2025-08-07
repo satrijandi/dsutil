@@ -1,0 +1,37 @@
+artifact_path: /workspaces/dsutil/pipeline/mlruns/1/models/m-3fd253cfa4404d9795c3a02f00e2acf3/artifacts
+flavors:
+  h2o:
+    code: null
+    data: model.h2o
+    h2o_version: 3.46.0.7
+  python_function:
+    data: model.h2o
+    env:
+      conda: conda.yaml
+      virtualenv: python_env.yaml
+    loader_module: mlflow.h2o
+    python_version: 3.12.1
+is_signature_from_type_hint: false
+mlflow_version: 3.2.0
+model_id: m-3fd253cfa4404d9795c3a02f00e2acf3
+model_size_bytes: 18320932
+model_uuid: m-3fd253cfa4404d9795c3a02f00e2acf3
+prompts: null
+run_id: f084fbd5e59b4389a818e68a50bb23f5
+saved_input_example_info:
+  artifact_path: input_example.json
+  pandas_orient: split
+  serving_input_path: serving_input_example.json
+  type: dataframe
+signature:
+  inputs: '[{"type": "double", "name": "feat_2", "required": true}, {"type": "double",
+    "name": "feat_3", "required": true}, {"type": "double", "name": "feat_8", "required":
+    true}, {"type": "double", "name": "feat_10", "required": true}, {"type": "double",
+    "name": "feat_9", "required": true}, {"type": "double", "name": "feat_5", "required":
+    true}, {"type": "double", "name": "feat_4", "required": true}, {"type": "double",
+    "name": "feat_1", "required": true}, {"type": "double", "name": "feat_7", "required":
+    true}]'
+  outputs: null
+  params: null
+type_hint_from_example: false
+utc_time_created: '2025-08-07 07:56:59.322311'
