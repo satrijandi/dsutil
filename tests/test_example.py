@@ -14,8 +14,8 @@ def test_example():
 def test_import_pipeline_modules():
     """Test that main pipeline modules can be imported."""
     try:
-        import sys
         import os
+        import sys
 
         # Add the pipeline directory to Python path
         pipeline_path = os.path.join(os.path.dirname(__file__), "..", "pipeline")
@@ -23,18 +23,14 @@ def test_import_pipeline_modules():
 
         # Test imports with mock dependencies
         from unittest.mock import patch
-        
-        with patch.dict('sys.modules', {
-            'lightgbm': None,
-            'h2o': None, 
-            'mlflow': None,
-            'mlflow.h2o': None,
-            'mlflow.sklearn': None
-        }):
-            from utils import checkpoint
-            from utils import data_processing
+
+        with patch.dict(
+            "sys.modules", {"lightgbm": None, "h2o": None, "mlflow": None, "mlflow.h2o": None, "mlflow.sklearn": None}
+        ):
+            from utils import checkpoint, data_processing
+
             # Skip modules with external dependencies for now
-            
+
         assert True
     except ImportError as e:
         # This is expected due to missing dependencies, so we'll skip for now

@@ -28,9 +28,7 @@ def validate_data(df: pd.DataFrame, config: Dict) -> bool:
     # Check if only one class exists
     unique_labels = df[config["TARGET_COL"]].nunique()
     if unique_labels <= 1:
-        raise ValueError(
-            f"Only {unique_labels} unique class(es) found in target column"
-        )
+        raise ValueError(f"Only {unique_labels} unique class(es) found in target column")
 
     # Check if data falls within specified date range
     df["temp_date"] = pd.to_datetime(df[config["DATE_COL"]])
@@ -44,26 +42,18 @@ def validate_data(df: pd.DataFrame, config: Dict) -> bool:
     # Check if label column has exactly 2 values and is boolean/integer/string
     label_values = df[config["TARGET_COL"]].unique()
     if len(label_values) != 2:
-        msg = (
-            f"Target column must have exactly 2 unique values, "
-            f"found {len(label_values)}"
-        )
+        msg = f"Target column must have exactly 2 unique values, " f"found {len(label_values)}"
         raise ValueError(msg)
 
     allowed_dtypes = ["int64", "int32", "bool", "object"]
     if not df[config["TARGET_COL"]].dtype in allowed_dtypes:
-        msg = (
-            f"Target column must be boolean/integer/string, "
-            f"found {df[config['TARGET_COL']].dtype}"
-        )
+        msg = f"Target column must be boolean/integer/string, " f"found {df[config['TARGET_COL']].dtype}"
         raise ValueError(msg)
 
     # Check if all column names contain only alphanumeric characters or underscores
     invalid_cols = [col for col in df.columns if not re.match(r"^[a-zA-Z0-9_]+$", col)]
     if invalid_cols:
-        raise ValueError(
-            f"Invalid column names (must be alphanumeric + underscore): {invalid_cols}"
-        )
+        raise ValueError(f"Invalid column names (must be alphanumeric + underscore): {invalid_cols}")
 
     df.drop("temp_date", axis=1, inplace=True)
     logger.info("Data validation passed")
@@ -81,11 +71,7 @@ def preprocess_data(df: pd.DataFrame, config: Dict) -> pd.DataFrame:
 
     # Take only id_columns + [target_col, date_col] - ignored_columns
     required_cols = config["ID_COLUMNS"] + [config["TARGET_COL"], config["DATE_COL"]]
-    feature_cols = [
-        col
-        for col in df.columns
-        if col not in required_cols and col not in config.get("IGNORED_FEATURES", [])
-    ]
+    feature_cols = [col for col in df.columns if col not in required_cols and col not in config.get("IGNORED_FEATURES", [])]
 
     final_cols = required_cols + feature_cols
     df_processed = df[final_cols].copy()
@@ -108,9 +94,7 @@ def preprocess_data(df: pd.DataFrame, config: Dict) -> pd.DataFrame:
     return df_processed
 
 
-def create_train_test_split(
-    df: pd.DataFrame, config: Dict
-) -> tuple[pd.DataFrame, pd.DataFrame]:
+def create_train_test_split(df: pd.DataFrame, config: Dict) -> tuple[pd.DataFrame, pd.DataFrame]:
     """
     Create train/test split based on date
     Test is always last month available data unless specified in config

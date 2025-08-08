@@ -13,12 +13,11 @@ from typing import Dict
 
 import pandas as pd
 import yaml
-
 from utils.checkpoint import CheckpointManager
+
 # Import utility modules
 from utils.data_processing import create_train_test_split, preprocess_data
-from utils.feature_engineering import (detect_shifting_features,
-                                       feature_selection_lgbm)
+from utils.feature_engineering import detect_shifting_features, feature_selection_lgbm
 from utils.mlflow_utils import setup_mlflow_tracking
 from utils.model_utils import evaluate_model, train_h2o_automl
 
@@ -45,7 +44,7 @@ def load_config(config_path: str) -> Dict:
 def setup_pipeline_environment() -> tuple[CheckpointManager, object]:
     """Initialize checkpoint manager and MLflow tracking"""
     checkpoint_manager = CheckpointManager()
-    
+
     # Initialize MLflow tracking
     try:
         mlflow_manager = setup_mlflow_tracking(
@@ -56,7 +55,7 @@ def setup_pipeline_environment() -> tuple[CheckpointManager, object]:
     except Exception as e:
         logger.warning(f"MLflow initialization failed: {e}. Continuing without MLflow.")
         mlflow_manager = None
-    
+
     return checkpoint_manager, mlflow_manager
 
 
@@ -64,7 +63,7 @@ def start_mlflow_run(mlflow_manager, config: Dict):
     """Start MLflow run with proper tags and parameters"""
     if not mlflow_manager:
         return None
-    
+
     try:
         # Create run tags
         run_tags = {
@@ -95,19 +94,17 @@ def start_mlflow_run(mlflow_manager, config: Dict):
 def execute_pipeline_step(checkpoint_manager, step_name: str, step_func, *args, **kwargs):
     """Generic function to execute pipeline steps with checkpointing"""
     result = checkpoint_manager.load_checkpoint(step_name)
-    
+
     if result is None:
         logger.info(f"Executing step: {step_name}")
         result = step_func(*args, **kwargs)
         checkpoint_manager.save_checkpoint(
-            step_name,
-            result,
-            metadata={"step_description": step_name.replace("_", " ").title()}
+            step_name, result, metadata={"step_description": step_name.replace("_", " ").title()}
         )
         logger.info(f"Completed step: {step_name}")
     else:
         logger.info(f"Loaded checkpoint for step: {step_name}")
-    
+
     return result
 
 
@@ -115,7 +112,7 @@ def finalize_mlflow_run(mlflow_manager, mlflow_run, final_features, shifting_fea
     """Finalize MLflow run with summary metrics"""
     if not mlflow_manager or not mlflow_run:
         return
-    
+
     try:
         # Log final pipeline metrics
         pipeline_summary_metrics = {
@@ -209,10 +206,7 @@ def main():
     if selected_features is None:
         logger.info("Performing feature selection...")
         feature_cols = [
-            col
-            for col in df_processed.columns
-            if col
-            not in config["ID_COLUMNS"] + [config["TARGET_COL"], config["DATE_COL"]]
+            col for col in df_processed.columns if col not in config["ID_COLUMNS"] + [config["TARGET_COL"], config["DATE_COL"]]
         ]
 
         X_train = train_df[feature_cols]
@@ -260,10 +254,7 @@ def main():
         logger.warning(msg)
         final_features = selected_features[:10]
 
-    msg = (
-        f"Final feature count: {len(final_features)} "
-        f"(removed {len(shifting_features)} shifting features)"
-    )
+    msg = f"Final feature count: {len(final_features)} " f"(removed {len(shifting_features)} shifting features)"
     logger.info(msg)
 
     # Step 5: Train model
@@ -272,9 +263,7 @@ def main():
 
     if aml is None:
         logger.info("Training model...")
-        aml = train_h2o_automl(
-            train_df, test_df, config, final_features, mlflow_manager
-        )
+        aml = train_h2o_automl(train_df, test_df, config, final_features, mlflow_manager)
         checkpoint_manager.save_checkpoint(
             step_name,
             aml,
@@ -292,15 +281,11 @@ def main():
 
     if evaluation_results is None:
         logger.info("Evaluating model...")
-        evaluation_results = evaluate_model(
-            aml, train_df, test_df, config, final_features, mlflow_manager
-        )
+        evaluation_results = evaluate_model(aml, train_df, test_df, config, final_features, mlflow_manager)
         checkpoint_manager.save_checkpoint(
             step_name,
             evaluation_results,
-            metadata={
-                "has_monthly_performance": ("monthly_performance" in evaluation_results)
-            },
+            metadata={"has_monthly_performance": ("monthly_performance" in evaluation_results)},
         )
     else:
         logger.info("Using cached evaluation results")
@@ -310,15 +295,11 @@ def main():
     output_dir.mkdir(exist_ok=True)
 
     # Save monthly performance
-    evaluation_results["monthly_performance"].to_csv(
-        output_dir / "monthly_performance.csv", index=False
-    )
+    evaluation_results["monthly_performance"].to_csv(output_dir / "monthly_performance.csv", index=False)
 
     # Save feature importance
     if evaluation_results["feature_importance"] is not None:
-        evaluation_results["feature_importance"].to_csv(
-            output_dir / "feature_importance.csv", index=False
-        )
+        evaluation_results["feature_importance"].to_csv(output_dir / "feature_importance.csv", index=False)
     else:
         logger.warning("No feature importance to save")
 

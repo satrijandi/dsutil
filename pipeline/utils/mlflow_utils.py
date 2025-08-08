@@ -56,10 +56,7 @@ class MLflowManager:
 
         # Create new experiment
         experiment_id = mlflow.create_experiment(experiment_name)
-        logger.info(
-            f"Created new MLflow experiment: {experiment_name} "
-            f"(ID: {experiment_id})"
-        )
+        logger.info(f"Created new MLflow experiment: {experiment_name} " f"(ID: {experiment_id})")
         return experiment_id
 
     def start_run(
@@ -89,7 +86,7 @@ class MLflowManager:
             param_items = list(params.items())
             batch_size = 50
             for i in range(0, len(param_items), batch_size):
-                batch = dict(param_items[i:i + batch_size])
+                batch = dict(param_items[i : i + batch_size])
                 mlflow.log_params(batch)
         else:
             mlflow.log_params(params)
@@ -99,14 +96,15 @@ class MLflowManager:
         """Log metrics to MLflow - OPTIMIZED for large metric sets"""
         # Filter out invalid metrics to prevent errors
         valid_metrics = {
-            k: v for k, v in metrics.items() 
-            if isinstance(v, (int, float)) and not (pd.isna(v) or v == float('inf') or v == float('-inf'))
+            k: v
+            for k, v in metrics.items()
+            if isinstance(v, (int, float)) and not (pd.isna(v) or v == float("inf") or v == float("-inf"))
         }
-        
+
         if valid_metrics:
             mlflow.log_metrics(valid_metrics, step=step)
             logger.info(f"Logged {len(valid_metrics)} valid metrics to MLflow")
-            
+
         if len(valid_metrics) != len(metrics):
             logger.warning(f"Filtered out {len(metrics) - len(valid_metrics)} invalid metrics")
 
@@ -142,7 +140,7 @@ class MLflowManager:
             limited_input_example = None
             if input_example is not None:
                 limited_input_example = input_example.head(min(5, len(input_example)))
-            
+
             model_info = mlflow.h2o.log_model(
                 h2o_model=model.leader if hasattr(model, "leader") else model,
                 artifact_path=model_name,
@@ -185,9 +183,7 @@ class MLflowManager:
             try:
                 self.client.get_registered_model(model_name)
             except mlflow.exceptions.RestException:
-                self.client.create_registered_model(
-                    model_name, description=description, tags=tags
-                )
+                self.client.create_registered_model(model_name, description=description, tags=tags)
                 logger.info(f"Created registered model: {model_name}")
 
             # Create model version
@@ -195,9 +191,7 @@ class MLflowManager:
                 name=model_name, source=model_uri, description=description, tags=tags
             )
 
-            logger.info(
-                f"Registered model version {model_version.version} for {model_name}"
-            )
+            logger.info(f"Registered model version {model_version.version} for {model_name}")
             return model_version
 
         except Exception as e:
@@ -245,9 +239,7 @@ class MLflowManager:
             logger.error(f"Failed to load model from {model_uri}: {e}")
             raise
 
-    def transition_model_stage(
-        self, model_name: str, version: str, stage: str, archive_existing: bool = True
-    ):
+    def transition_model_stage(self, model_name: str, version: str, stage: str, archive_existing: bool = True):
         """
         Transition model to a different stage
 
@@ -281,9 +273,7 @@ class MLflowManager:
             logger.error(f"Failed to list registered models: {e}")
             raise
 
-    def get_experiment_runs(
-        self, experiment_id: Optional[str] = None, max_results: int = 1000
-    ) -> List[mlflow.entities.Run]:
+    def get_experiment_runs(self, experiment_id: Optional[str] = None, max_results: int = 1000) -> List[mlflow.entities.Run]:
         """Get runs from an experiment"""
         if experiment_id is None:
             experiment_id = self.experiment_id
@@ -337,9 +327,7 @@ class MLflowManager:
             reverse=not ascending,
         )[0]
 
-        logger.info(
-            f"Best run: {best_run.info.run_id} with {metric_name}={best_run.data.metrics[metric_name]}"
-        )
+        logger.info(f"Best run: {best_run.info.run_id} with {metric_name}={best_run.data.metrics[metric_name]}")
         return best_run
 
     def end_run(self, status: str = "FINISHED"):
@@ -347,9 +335,7 @@ class MLflowManager:
         mlflow.end_run(status=status)
         logger.info("Ended MLflow run")
 
-    def create_model_signature(
-        self, input_example: pd.DataFrame, output_example: Optional[pd.DataFrame] = None
-    ):
+    def create_model_signature(self, input_example: pd.DataFrame, output_example: Optional[pd.DataFrame] = None):
         """Create model signature from input/output examples"""
         try:
             signature = mlflow.models.infer_signature(input_example, output_example)
@@ -360,9 +346,7 @@ class MLflowManager:
             raise
 
 
-def setup_mlflow_tracking(
-    tracking_uri: str = "sqlite:///mlflow.db", experiment_name: str = "ml_pipeline"
-) -> MLflowManager:
+def setup_mlflow_tracking(tracking_uri: str = "sqlite:///mlflow.db", experiment_name: str = "ml_pipeline") -> MLflowManager:
     """
     Set up MLflow tracking with local SQLite backend
 

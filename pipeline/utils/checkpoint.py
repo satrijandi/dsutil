@@ -4,8 +4,8 @@ Checkpoint system to save/load intermediate pipeline results
 
 import json
 import logging
-import pickle
 import lzma
+import pickle
 from pathlib import Path
 from typing import Any, Dict, Optional
 
@@ -35,9 +35,7 @@ class CheckpointManager:
         with open(self.checkpoints_file, "w") as f:
             json.dump(self.state, f, indent=2)
 
-    def save_checkpoint(
-        self, step_name: str, data: Any, metadata: Optional[Dict] = None
-    ) -> str:
+    def save_checkpoint(self, step_name: str, data: Any, metadata: Optional[Dict] = None) -> str:
         """
         Save a checkpoint for a pipeline step - OPTIMIZED with compression and selective saving
 
@@ -54,7 +52,7 @@ class CheckpointManager:
         try:
             # Optimize data before saving based on type
             optimized_data = self._optimize_data_for_storage(data, step_name)
-            
+
             # Save with compression for better storage efficiency
             with lzma.open(checkpoint_path, "wb", preset=1) as f:  # preset=1 for fast compression
                 pickle.dump(optimized_data, f, protocol=pickle.HIGHEST_PROTOCOL)
@@ -79,7 +77,7 @@ class CheckpointManager:
         except Exception as e:
             logger.error(f"Failed to save checkpoint for step '{step_name}': {e}")
             raise
-            
+
     def _optimize_data_for_storage(self, data: Any, step_name: str) -> Any:
         """
         Optimize data for storage based on step type - OPTIMIZED for selective saving
@@ -88,29 +86,29 @@ class CheckpointManager:
         if isinstance(data, pd.DataFrame):
             # Create a copy to avoid modifying original
             optimized_df = data.copy()
-            
+
             # Downcast numeric columns to save space
-            for col in optimized_df.select_dtypes(include=['int64']).columns:
-                optimized_df[col] = pd.to_numeric(optimized_df[col], downcast='integer')
-            
-            for col in optimized_df.select_dtypes(include=['float64']).columns:
-                optimized_df[col] = pd.to_numeric(optimized_df[col], downcast='float')
-                
+            for col in optimized_df.select_dtypes(include=["int64"]).columns:
+                optimized_df[col] = pd.to_numeric(optimized_df[col], downcast="integer")
+
+            for col in optimized_df.select_dtypes(include=["float64"]).columns:
+                optimized_df[col] = pd.to_numeric(optimized_df[col], downcast="float")
+
             return optimized_df
-            
+
         # For model evaluation results, keep only essential data
         elif isinstance(data, dict) and step_name == "evaluation_results":
             # Keep essential evaluation data, skip large intermediate results
             essential_keys = ["monthly_performance", "model_summary"]
             if "feature_importance" in data and data["feature_importance"] is not None:
                 essential_keys.append("feature_importance")
-                
+
             return {k: v for k, v in data.items() if k in essential_keys}
-            
+
         # For feature lists, no optimization needed
         elif isinstance(data, list):
             return data
-            
+
         # For complex objects (like H2O models), save as-is
         else:
             return data
@@ -138,7 +136,7 @@ class CheckpointManager:
         try:
             # Handle both compressed and uncompressed checkpoints for backward compatibility
             is_compressed = self.state[step_name].get("compressed", False)
-            
+
             if is_compressed or checkpoint_path.suffix == ".xz":
                 with lzma.open(checkpoint_path, "rb") as f:
                     data = pickle.load(f)
@@ -148,9 +146,7 @@ class CheckpointManager:
 
             timestamp = self.state[step_name]["timestamp"]
             file_size = self.state[step_name].get("file_size_mb", "unknown")
-            logger.info(
-                f"Checkpoint loaded for step '{step_name}' (saved: {timestamp}, size: {file_size} MB)"
-            )
+            logger.info(f"Checkpoint loaded for step '{step_name}' (saved: {timestamp}, size: {file_size} MB)")
             return data
 
         except Exception as e:

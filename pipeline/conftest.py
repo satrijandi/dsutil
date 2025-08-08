@@ -1,6 +1,7 @@
 """
 Pytest configuration for the pipeline tests
 """
+
 import sys
 from pathlib import Path
 

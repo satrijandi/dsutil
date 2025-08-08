@@ -49,32 +49,24 @@ class ModelServing:
         try:
             # Get model version info
             if self.stage:
-                model_version = self.mlflow_manager.get_model_version(
-                    self.model_name, stage=self.stage
-                )
+                model_version = self.mlflow_manager.get_model_version(self.model_name, stage=self.stage)
                 model_uri = f"models:/{self.model_name}/{self.stage}"
             else:
                 version = self.version or "latest"
-                model_version = self.mlflow_manager.get_model_version(
-                    self.model_name, version=version
-                )
+                model_version = self.mlflow_manager.get_model_version(self.model_name, version=version)
                 model_uri = f"models:/{self.model_name}/{model_version.version}"
 
             # Load the model
             self.model = mlflow.h2o.load_model(model_uri)
             self.model_info = model_version
 
-            logger.info(
-                f"Loaded model {self.model_name} v{model_version.version} from MLflow"
-            )
+            logger.info(f"Loaded model {self.model_name} v{model_version.version} from MLflow")
 
         except Exception as e:
             logger.error(f"Failed to load model {self.model_name}: {e}")
             raise
 
-    def predict(
-        self, input_data: Union[pd.DataFrame, Dict, List[Dict]]
-    ) -> pd.DataFrame:
+    def predict(self, input_data: Union[pd.DataFrame, Dict, List[Dict]]) -> pd.DataFrame:
         """
         Make predictions using the loaded model
 
@@ -112,9 +104,7 @@ class ModelServing:
             logger.error(f"Prediction failed: {e}")
             raise
 
-    def predict_proba(
-        self, input_data: Union[pd.DataFrame, Dict, List[Dict]]
-    ) -> np.ndarray:
+    def predict_proba(self, input_data: Union[pd.DataFrame, Dict, List[Dict]]) -> np.ndarray:
         """
         Get prediction probabilities
 
@@ -132,9 +122,7 @@ class ModelServing:
         elif len(predictions.columns) == 1:
             return predictions.iloc[:, 0].values  # type: ignore
         else:
-            logger.warning(
-                "Could not identify probability column. Returning first column."
-            )
+            logger.warning("Could not identify probability column. Returning first column.")
             return predictions.iloc[:, 0].values  # type: ignore
 
     def get_model_info(self) -> Dict[str, Any]:
@@ -220,9 +208,7 @@ class ModelServingAPI:
                 "probabilities": probabilities.tolist(),
                 "model_info": {
                     "name": self.model_name,
-                    "version": getattr(
-                        self.model_serving.model_info, "version", "unknown"
-                    ),
+                    "version": getattr(self.model_serving.model_info, "version", "unknown"),
                 },
                 "status": "success",
                 "timestamp": pd.Timestamp.now().isoformat(),
@@ -405,9 +391,7 @@ def batch_predict(
 
         # Combine with original data
         result_df = input_data.copy()
-        result_df["prediction"] = predictions.iloc[
-            :, -1
-        ]  # Last column is usually the prediction
+        result_df["prediction"] = predictions.iloc[:, -1]  # Last column is usually the prediction
         result_df["probability"] = probabilities
 
         # Save if output path provided

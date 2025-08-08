@@ -32,15 +32,11 @@ def train_h2o_automl(
     h2o.init(
         nthreads=-1,  # Use all available cores
         max_mem_size="4G",  # Adjust based on available memory
-        strict_version_check=False
+        strict_version_check=False,
     )
 
     # Prepare features (exclude shifting features if any were removed)
-    feature_cols = [
-        col
-        for col in selected_features
-        if col not in config["ID_COLUMNS"] + [config["DATE_COL"]]
-    ]
+    feature_cols = [col for col in selected_features if col not in config["ID_COLUMNS"] + [config["DATE_COL"]]]
 
     # Convert to H2O frames
     train_cols = feature_cols + [config["TARGET_COL"]]
@@ -55,7 +51,7 @@ def train_h2o_automl(
     # Dynamic resource allocation based on data size and available resources - OPTIMIZED
     data_size = len(train_df)
     num_features = len(feature_cols)
-    
+
     # Calculate optimal parameters based on dataset characteristics
     if data_size < 10000:
         max_models, max_runtime = 8, 600  # Small dataset: more models, more time
@@ -63,14 +59,14 @@ def train_h2o_automl(
         max_models, max_runtime = 12, 900  # Medium dataset: balanced approach
     else:
         max_models, max_runtime = 20, 1200  # Large dataset: more models for better performance
-    
+
     # Adjust for feature complexity
     if num_features > 100:
         max_runtime = int(max_runtime * 1.5)  # More time for high-dimensional data
-    
+
     # Use available CPU cores efficiently
     nthreads = min(os.cpu_count() or 4, 8)  # Cap at 8 threads to prevent resource exhaustion
-    
+
     # Log training parameters to MLflow if available
     if mlflow_manager:
         training_params = {
@@ -87,12 +83,12 @@ def train_h2o_automl(
 
     # Train AutoML with optimized parameters
     aml = H2OAutoML(
-        max_models=max_models, 
-        seed=42, 
+        max_models=max_models,
+        seed=42,
         max_runtime_secs=max_runtime,
         nfolds=5,  # Enable cross-validation for better model selection
         balance_classes=True,  # Handle class imbalance automatically
-        sort_metric="AUC"  # Optimize for AUC which is common for binary classification
+        sort_metric="AUC",  # Optimize for AUC which is common for binary classification
     )
     aml.train(x=feature_cols, y=config["TARGET_COL"], training_frame=h2o_train)
 
@@ -107,9 +103,7 @@ def train_h2o_automl(
 
             # Log the model with registration
             model_name = f"{config.get('PROJECT_NAME', 'ml_pipeline')}_model"
-            registered_model_name = (
-                f"{config.get('PROJECT_NAME', 'ml_pipeline')}_registered"
-            )
+            registered_model_name = f"{config.get('PROJECT_NAME', 'ml_pipeline')}_registered"
 
             model_info = mlflow_manager.log_model(
                 model=aml,
@@ -141,11 +135,7 @@ def evaluate_model(
     """
     logger.info("Starting model evaluation...")
 
-    feature_cols = [
-        col
-        for col in selected_features
-        if col not in config["ID_COLUMNS"] + [config["DATE_COL"]]
-    ]
+    feature_cols = [col for col in selected_features if col not in config["ID_COLUMNS"] + [config["DATE_COL"]]]
 
     results: Dict[str, Any] = {}
 
@@ -156,10 +146,10 @@ def evaluate_model(
 
     # Pre-convert feature columns to H2O frame once to avoid repeated conversions
     h2o_combined = h2o.H2OFrame(combined_df[feature_cols + ["year_month"]])
-    
+
     monthly_results = []
     unique_months = sorted(combined_df["year_month"].unique())
-    
+
     for month in unique_months:
         month_data = combined_df[combined_df["year_month"] == month]
 
@@ -169,7 +159,7 @@ def evaluate_model(
         # Use filtered H2O frame instead of creating new one
         month_mask = h2o_combined["year_month"] == str(month)
         h2o_month_filtered = h2o_combined[month_mask, feature_cols]
-        
+
         # Batch prediction for efficiency
         predictions = aml.leader.predict(h2o_month_filtered)
         pred_probs = predictions.as_data_frame()["p1"].values
@@ -206,12 +196,8 @@ def evaluate_model(
     # Model summary - structured and readable
     try:
         # Get model performance metrics
-        train_auc = (
-            float(aml.leader.auc(train=True)) if aml.leader.auc(train=True) else None
-        )
-        valid_auc = (
-            float(aml.leader.auc(valid=True)) if aml.leader.auc(valid=True) else None
-        )
+        train_auc = float(aml.leader.auc(train=True)) if aml.leader.auc(train=True) else None
+        valid_auc = float(aml.leader.auc(valid=True)) if aml.leader.auc(valid=True) else None
 
         # Get model details
         model_type = str(type(aml.leader).__name__)
@@ -227,14 +213,8 @@ def evaluate_model(
                     metric_name = row.iloc[0]  # First column is metric name
                     if metric_name in ["auc", "accuracy", "precision", "recall", "f1"]:
                         cv_summary[metric_name] = {
-                            "mean": (
-                                float(row.iloc[1]) if pd.notna(row.iloc[1]) else None
-                            ),
-                            "std": (
-                                float(row.iloc[2])
-                                if len(row) > 2 and pd.notna(row.iloc[2])
-                                else None
-                            ),
+                            "mean": (float(row.iloc[1]) if pd.notna(row.iloc[1]) else None),
+                            "std": (float(row.iloc[2]) if len(row) > 2 and pd.notna(row.iloc[2]) else None),
                         }
         except Exception:
             cv_summary = {}
@@ -256,11 +236,7 @@ def evaluate_model(
             "model_info": {
                 "model_type": model_type,
                 "model_key": model_key,
-                "algorithm": (
-                    "H2O AutoML Stacked Ensemble"
-                    if "Stacked" in model_type
-                    else model_type
-                ),
+                "algorithm": ("H2O AutoML Stacked Ensemble" if "Stacked" in model_type else model_type),
             },
             "performance_metrics": {
                 "training_auc": train_auc,
@@ -268,9 +244,7 @@ def evaluate_model(
                 "cross_validation_metrics": cv_summary,
             },
             "model_details": {
-                "total_models_trained": (
-                    len(aml.leaderboard.as_data_frame()) if aml.leaderboard else None
-                ),
+                "total_models_trained": (len(aml.leaderboard.as_data_frame()) if aml.leaderboard else None),
                 "best_model_rank": 1,
                 "training_time_info": "5 minutes max runtime with early stopping",
             },
@@ -289,16 +263,8 @@ def evaluate_model(
                 "status": "trained_successfully",
             },
             "performance_metrics": {
-                "training_auc": (
-                    float(aml.leader.auc(train=True))
-                    if aml.leader.auc(train=True)
-                    else None
-                ),
-                "validation_auc": (
-                    float(aml.leader.auc(valid=True))
-                    if aml.leader.auc(valid=True)
-                    else None
-                ),
+                "training_auc": (float(aml.leader.auc(train=True)) if aml.leader.auc(train=True) else None),
+                "validation_auc": (float(aml.leader.auc(valid=True)) if aml.leader.auc(valid=True) else None),
             },
         }
 
@@ -307,15 +273,9 @@ def evaluate_model(
         try:
             # Log key performance metrics
             performance_metrics = {
-                "training_auc": (
-                    float(aml.leader.auc(train=True))
-                    if aml.leader.auc(train=True)
-                    else 0.0
-                ),
+                "training_auc": (float(aml.leader.auc(train=True)) if aml.leader.auc(train=True) else 0.0),
                 "num_monthly_evaluations": len(monthly_results),
-                "total_models_trained": (
-                    len(aml.leaderboard.as_data_frame()) if aml.leaderboard else 0
-                ),
+                "total_models_trained": (len(aml.leaderboard.as_data_frame()) if aml.leaderboard else 0),
             }
 
             # Add cross-validation metrics if available
@@ -336,9 +296,7 @@ def evaluate_model(
                                 float(row.iloc[1]) if pd.notna(row.iloc[1]) else 0.0
                             )
                             if len(row) > 2 and pd.notna(row.iloc[2]):
-                                performance_metrics[f"cv_{metric_name}_std"] = float(
-                                    row.iloc[2]
-                                )
+                                performance_metrics[f"cv_{metric_name}_std"] = float(row.iloc[2])
             except Exception:
                 pass
 
@@ -354,22 +312,18 @@ def evaluate_model(
             import tempfile
 
             # Save monthly performance as artifact - OPTIMIZED memory usage
-            with tempfile.NamedTemporaryFile(
-                mode="w", suffix=".csv", delete=False
-            ) as f:
+            with tempfile.NamedTemporaryFile(mode="w", suffix=".csv", delete=False) as f:
                 # Use efficient CSV writing without loading all into memory
                 results["monthly_performance"].to_csv(f.name, index=False)
                 mlflow_manager.log_artifact(f.name, "evaluation_results")
                 os.unlink(f.name)
 
             # Save model summary as artifact - OPTIMIZED
-            with tempfile.NamedTemporaryFile(
-                mode="w", suffix=".json", delete=False
-            ) as f:
+            with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
                 import json
 
                 # Serialize with memory-efficient settings
-                json.dump(results["model_summary"], f, indent=2, default=str, separators=(',', ':'))
+                json.dump(results["model_summary"], f, indent=2, default=str, separators=(",", ":"))
                 mlflow_manager.log_artifact(f.name, "evaluation_results")
                 os.unlink(f.name)
 

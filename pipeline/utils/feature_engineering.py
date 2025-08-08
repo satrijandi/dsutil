@@ -13,9 +13,7 @@ from scipy import stats
 logger = logging.getLogger(__name__)
 
 
-def feature_selection_lgbm(
-    X: pd.DataFrame, y: pd.Series, n_features: int = 50
-) -> List[str]:
+def feature_selection_lgbm(X: pd.DataFrame, y: pd.Series, n_features: int = 50) -> List[str]:
     """
     Select features using LightGBM feature importance
     """
@@ -62,27 +60,25 @@ def _calculate_feature_drift(args: Tuple[str, pd.DataFrame, pd.DataFrame, float]
     Helper function to calculate drift for a single feature (for parallel processing)
     """
     feature, reference_data, current_data, threshold = args
-    
+
     try:
         ref_values = reference_data[feature].dropna()
         cur_values = current_data[feature].dropna()
-        
+
         if len(ref_values) == 0 or len(cur_values) == 0:
             return feature, 0.0, False
-        
+
         # Use Kolmogorov-Smirnov test
         ks_stat, _ = stats.ks_2samp(ref_values, cur_values)
         is_shifting = ks_stat > threshold
-        
+
         return feature, ks_stat, is_shifting
-        
+
     except Exception:
         return feature, 0.0, False
 
 
-def detect_shifting_features(
-    train_df: pd.DataFrame, config: Dict, threshold: float = 0.3
-) -> List[str]:
+def detect_shifting_features(train_df: pd.DataFrame, config: Dict, threshold: float = 0.3) -> List[str]:
     """
     Detect shifting features using statistical tests - OPTIMIZED with parallel processing
     """
@@ -108,17 +104,13 @@ def detect_shifting_features(
 
     # Use first month as reference
     reference_month = months[0]
-    reference_data = train_df_filtered[
-        train_df_filtered["year_month"] == reference_month
-    ]
+    reference_data = train_df_filtered[train_df_filtered["year_month"] == reference_month]
 
     shifting_features = set()  # Use set for faster lookups
     feature_cols = [
         col
         for col in train_df_filtered.columns
-        if col
-        not in config["ID_COLUMNS"]
-        + [config["TARGET_COL"], config["DATE_COL"], "year_month"]
+        if col not in config["ID_COLUMNS"] + [config["TARGET_COL"], config["DATE_COL"], "year_month"]
     ]
 
     # Process each month in parallel
@@ -147,10 +139,7 @@ def detect_shifting_features(
         for feature, ks_stat, is_shifting in results:
             if is_shifting:
                 shifting_features.add(feature)
-                msg = (
-                    f"Shifting feature detected: {feature} "
-                    f"(KS stat: {ks_stat:.3f}) in month {month}"
-                )
+                msg = f"Shifting feature detected: {feature} " f"(KS stat: {ks_stat:.3f}) in month {month}"
                 logger.info(msg)
 
     shifting_features_list = list(shifting_features)

@@ -94,10 +94,7 @@ def start_mlflow_ui(port: int = 5000):
 
         # Check if mlflow.db exists
         if not os.path.exists("mlflow.db"):
-            msg = (
-                "Warning: mlflow.db not found. Run the pipeline first to "
-                "create tracking data."
-            )
+            msg = "Warning: mlflow.db not found. Run the pipeline first to " "create tracking data."
             print(msg)
 
         # Start MLflow UI
@@ -139,11 +136,7 @@ def show_mlflow_experiments():
                 print(f"    Status: {run.info.status}")
                 print(f"    Start Time: {run.info.start_time}")
                 if run.data.metrics:
-                    key_metrics = {
-                        k: v
-                        for k, v in run.data.metrics.items()
-                        if k in ["training_auc", "cv_auc_mean"]
-                    }
+                    key_metrics = {k: v for k, v in run.data.metrics.items() if k in ["training_auc", "cv_auc_mean"]}
                     if key_metrics:
                         print(f"    Key Metrics: {key_metrics}")
             print()
@@ -171,9 +164,7 @@ def show_registered_models():
 
             # Get latest versions
             try:
-                versions = mlflow_manager.client.search_model_versions(
-                    f"name='{model.name}'"
-                )
+                versions = mlflow_manager.client.search_model_versions(f"name='{model.name}'")
                 if versions:
                     latest_version = max(versions, key=lambda v: int(v.version))
                     print(f"Latest Version: {latest_version.version}")
