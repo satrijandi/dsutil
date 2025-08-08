@@ -22,6 +22,14 @@ from utils.feature_engineering import (detect_shifting_features,
 from utils.mlflow_utils import setup_mlflow_tracking
 from utils.model_utils import evaluate_model, train_h2o_automl
 
+# Configuration constants
+DEFAULT_N_FEATURES = 50
+DEFAULT_DRIFT_THRESHOLD = 0.3
+CONFIG_PATH = "/workspaces/dsutil/pipeline/input/config.yaml"
+DATA_PATH = "/workspaces/dsutil/pipeline/input/dataset.parquet"
+MLFLOW_DB_URI = "sqlite:///mlflow.db"
+EXPERIMENT_NAME = "ml_pipeline_experiment"
+
 warnings.filterwarnings("ignore")
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -34,14 +42,10 @@ def load_config(config_path: str) -> Dict:
     return config
 
 
-def main():
-    """Main pipeline execution with checkpoints and MLflow tracking"""
-    config_path = "/workspaces/dsutil/pipeline/input/config.yaml"
-    data_path = "/workspaces/dsutil/pipeline/input/dataset.parquet"
-
-    # Initialize checkpoint manager
+def setup_pipeline_environment() -> tuple[CheckpointManager, object]:
+    """Initialize checkpoint manager and MLflow tracking"""
     checkpoint_manager = CheckpointManager()
-
+    
     # Initialize MLflow tracking
     try:
         mlflow_manager = setup_mlflow_tracking(
@@ -52,37 +56,95 @@ def main():
     except Exception as e:
         logger.warning(f"MLflow initialization failed: {e}. Continuing without MLflow.")
         mlflow_manager = None
+    
+    return checkpoint_manager, mlflow_manager
 
-    # Load configuration and data
+
+def start_mlflow_run(mlflow_manager, config: Dict):
+    """Start MLflow run with proper tags and parameters"""
+    if not mlflow_manager:
+        return None
+    
+    try:
+        # Create run tags
+        run_tags = {
+            "project": config.get("PROJECT_NAME", "ML_Pipeline"),
+            "environment": "development",
+            "pipeline_version": "modular_v1",
+        }
+
+        run_name = f"pipeline_run_{pd.Timestamp.now().strftime('%Y%m%d_%H%M%S')}"
+        mlflow_run = mlflow_manager.start_run(run_name=run_name, tags=run_tags)
+
+        # Log config parameters
+        config_params = {
+            "target_col": config.get("TARGET_COL"),
+            "date_col": config.get("DATE_COL"),
+            "train_start_date": config.get("TRAIN_START_DATE"),
+            "oot_start_date": config.get("OOT_START_DATE"),
+            "oot_end_date": config.get("OOT_END_DATE"),
+        }
+        mlflow_manager.log_parameters(config_params)
+        return mlflow_run
+
+    except Exception as e:
+        logger.warning(f"Failed to start MLflow run: {e}")
+        return None
+
+
+def execute_pipeline_step(checkpoint_manager, step_name: str, step_func, *args, **kwargs):
+    """Generic function to execute pipeline steps with checkpointing"""
+    result = checkpoint_manager.load_checkpoint(step_name)
+    
+    if result is None:
+        logger.info(f"Executing step: {step_name}")
+        result = step_func(*args, **kwargs)
+        checkpoint_manager.save_checkpoint(
+            step_name,
+            result,
+            metadata={"step_description": step_name.replace("_", " ").title()}
+        )
+        logger.info(f"Completed step: {step_name}")
+    else:
+        logger.info(f"Loaded checkpoint for step: {step_name}")
+    
+    return result
+
+
+def finalize_mlflow_run(mlflow_manager, mlflow_run, final_features, shifting_features, train_df, test_df):
+    """Finalize MLflow run with summary metrics"""
+    if not mlflow_manager or not mlflow_run:
+        return
+    
+    try:
+        # Log final pipeline metrics
+        pipeline_summary_metrics = {
+            "pipeline_success": 1,
+            "total_features_selected": len(final_features),
+            "features_removed_drift": len(shifting_features),
+            "training_samples": len(train_df),
+            "test_samples": len(test_df),
+        }
+        mlflow_manager.log_metrics(pipeline_summary_metrics)
+
+        mlflow_manager.end_run("FINISHED")
+        logger.info(f"MLflow run completed: {mlflow_run.info.run_id}")
+    except Exception as e:
+        logger.warning(f"Failed to end MLflow run properly: {e}")
+
+
+def main():
+    """Main pipeline execution with checkpoints and MLflow tracking"""
+    # Configuration
+    config_path = "/workspaces/dsutil/pipeline/input/config.yaml"
+    data_path = "/workspaces/dsutil/pipeline/input/dataset.parquet"
+
+    # Initialize pipeline environment
+    checkpoint_manager, mlflow_manager = setup_pipeline_environment()
     config = load_config(config_path)
 
-    # Start MLflow run
-    mlflow_run = None
-    if mlflow_manager:
-        try:
-            # Create run tags
-            run_tags = {
-                "project": config.get("PROJECT_NAME", "ML_Pipeline"),
-                "environment": "development",
-                "pipeline_version": "modular_v1",
-            }
-
-            run_name = f"pipeline_run_{pd.Timestamp.now().strftime('%Y%m%d_%H%M%S')}"
-            mlflow_run = mlflow_manager.start_run(run_name=run_name, tags=run_tags)
-
-            # Log config parameters
-            config_params = {
-                "target_col": config.get("TARGET_COL"),
-                "date_col": config.get("DATE_COL"),
-                "train_start_date": config.get("TRAIN_START_DATE"),
-                "oot_start_date": config.get("OOT_START_DATE"),
-                "oot_end_date": config.get("OOT_END_DATE"),
-            }
-            mlflow_manager.log_parameters(config_params)
-
-        except Exception as e:
-            logger.warning(f"Failed to start MLflow run: {e}")
-            mlflow_run = None
+    # Start MLflow tracking
+    mlflow_run = start_mlflow_run(mlflow_manager, config)
 
     # Step 1: Load and preprocess data
     step_name = "preprocessed_data"
