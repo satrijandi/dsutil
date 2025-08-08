@@ -5,8 +5,20 @@ Tests for feature_engineering.py module
 import pandas as pd
 import pytest
 from unittest.mock import patch, MagicMock
+import sys
+import os
 
-from utils.feature_engineering import feature_selection_lgbm, detect_shifting_features
+# Add the pipeline directory to Python path
+pipeline_path = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, pipeline_path)
+
+# Mock lightgbm at module level to avoid import errors
+with patch.dict('sys.modules', {
+    'lightgbm': MagicMock(),
+    'scipy': MagicMock(),
+    'scipy.stats': MagicMock()
+}):
+    from utils.feature_engineering import feature_selection_lgbm, detect_shifting_features
 
 
 class TestFeatureSelectionLgbm:

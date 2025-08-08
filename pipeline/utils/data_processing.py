@@ -126,10 +126,14 @@ def create_train_test_split(
         test_df = df_sorted[df_sorted[config["DATE_COL"]] >= test_start]
     else:
         # Last month logic
-        last_date = df_sorted[config["DATE_COL"]].max()
-        test_start = last_date.replace(day=1)  # First day of last month
-        train_df = df_sorted[df_sorted[config["DATE_COL"]] < test_start]
-        test_df = df_sorted[df_sorted[config["DATE_COL"]] >= test_start]
+        if len(df_sorted) == 0:
+            train_df = df_sorted.copy()
+            test_df = df_sorted.copy()
+        else:
+            last_date = df_sorted[config["DATE_COL"]].max()
+            test_start = last_date.replace(day=1)  # First day of last month
+            train_df = df_sorted[df_sorted[config["DATE_COL"]] < test_start]
+            test_df = df_sorted[df_sorted[config["DATE_COL"]] >= test_start]
 
     logger.info(f"Train set: {len(train_df)} samples, Test set: {len(test_df)} samples")
     return train_df, test_df
