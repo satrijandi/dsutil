@@ -1,0 +1,90 @@
+# Feature Configuration File
+feature_category: 'pc_login_hist_l90d_v1'
+feature_type: 'batch'  # options: batch, real_time, tag
+created_by: 'nugroho.satrijandi'
+team_name: 'ds_bnc'
+
+# Entity mappings
+entities: ['bnc_uid', 'partition_date']
+
+# Table configurations
+raw_table_query: |
+  WITH raw AS (
+   SELECT 
+      uid as bnc_uid
+      , DATE('${%Y-%m-%d,-0}') AS partition_date
+      , create_time as login_unix_ts
+      , unix_timestamp(
+        to_utc_timestamp(
+              cast(DATE('${%Y-%m-%d,-0}') as timestamp),
+              'Asia/Jakarta'
+          )
+        ) * 1000 AS partition_date_unix_ts
+      , id as login_id
+    FROM hive.snap.mob_t_login_device_log
+    WHERE TRUE 
+    AND success_flag = 0
+    AND deleted = 0
+    AND create_date = '20250805'
+    AND app_login = 1
+    AND create_date >= date_format(date_sub(DATE('${%Y-%m-%d,-0}'), 90), 'yyyyMMdd') -- start at 90 days prior
+    AND create_date < date_format(DATE('${%Y-%m-%d,-0}'), 'yyyyMMdd') -- end at midnight today
+    )
+    , prep AS (
+      SELECT 
+        bnc_uid
+        , partition_date
+        , CASE 
+          WHEN device_type = 'ios' THEN TRUE 
+          ELSE FALSE 
+          END as is_ios
+        , login_id 
+        , login_unix_ts
+        , (login_unix_ts BETWEEN partition_date_unix_ts - 86400000 AND partition_date_unix_ts) as l1d
+        , (login_unix_ts BETWEEN partition_date_unix_ts - 259200000 AND partition_date_unix_ts) as l3d
+        , (login_unix_ts BETWEEN partition_date_unix_ts - 604800000 AND partition_date_unix_ts) as l7d
+        , (login_unix_ts BETWEEN partition_date_unix_ts - 1209600000 AND partition_date_unix_ts) as l14d
+        , (login_unix_ts BETWEEN partition_date_unix_ts - 2592000000 AND partition_date_unix_ts) as l30d
+        , (login_unix_ts BETWEEN partition_date_unix_ts - 5184000000 AND partition_date_unix_ts) as l60d
+        , (login_unix_ts BETWEEN partition_date_unix_ts - 7776000000 AND partition_date_unix_ts) as l90d
+        , (login_unix_ts - 631152000000) / (partition_date_unix_ts - 631152000000) AS scaled_diff_login_unix_ts
+      FROM raw
+    )
+
+
+# Column aggregation configuration
+# Format: column_name: ([has_condition_0, has_condition_1, has_condition_2, time_cond_dict_applied], [aggregations])
+col_agg_dict:
+  login_id:
+    conditions: [true, false, false, true] 
+    aggregations: ['COUNT']
+  is_ios:
+    conditions: [true, false, false, true]
+    aggregations: ['MIN', 'MAX', 'AVG']
+  scaled_diff_login_unix_ts:
+    conditions: [true, false, false, true]
+    aggregations: ['MIN', 'MAX', 'AVG']
+  login_unix_ts:
+    conditions: [true, false, false, true]
+    aggregations: ['MIN', 'MAX']
+# Condition dictionaries
+condition_name_0:
+  - 'TRUE'
+  - is_ios: 'is_ios'
+  - is_notios: '(NOT is_ios)'
+
+condition_name_1:
+  - 'TRUE'
+
+condition_name_2:
+  - 'TRUE'
+
+# Time condition mappings
+time_cond_dict:
+  - l1d
+  - l3d
+  - l7d
+  - l14d
+  - l30d
+  - l60d
+  - l90d

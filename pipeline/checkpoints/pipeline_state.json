@@ -1,0 +1,84 @@
+{
+  "preprocessed_data": {
+    "file_path": "checkpoints/preprocessed_data.pkl",
+    "timestamp": "2025-08-07T06:50:36.034103",
+    "metadata": {
+      "shape": [
+        85869,
+        13
+      ],
+      "columns": [
+        "risk_id",
+        "label",
+        "partition_date",
+        "feat_1",
+        "feat_2",
+        "feat_3",
+        "feat_4",
+        "feat_5",
+        "feat_6",
+        "feat_7",
+        "feat_8",
+        "feat_9",
+        "feat_10"
+      ]
+    }
+  },
+  "train_test_split": {
+    "file_path": "checkpoints/train_test_split.pkl",
+    "timestamp": "2025-08-07T06:50:36.065248",
+    "metadata": {
+      "train_size": 85869,
+      "test_size": 0,
+      "train_date_range": [
+        "2024-01-01 00:00:00",
+        "2024-08-01 00:00:00"
+      ],
+      "test_date_range": []
+    }
+  },
+  "selected_features": {
+    "file_path": "checkpoints/selected_features.pkl",
+    "timestamp": "2025-08-07T06:50:38.177589",
+    "metadata": {
+      "num_features": 10,
+      "features": [
+        "feat_2",
+        "feat_3",
+        "feat_6",
+        "feat_8",
+        "feat_10",
+        "feat_9",
+        "feat_5",
+        "feat_4",
+        "feat_1",
+        "feat_7"
+      ]
+    }
+  },
+  "shifting_features": {
+    "file_path": "checkpoints/shifting_features.pkl",
+    "timestamp": "2025-08-07T06:50:40.176925",
+    "metadata": {
+      "num_shifting": 1,
+      "shifting_features": [
+        "feat_6"
+      ]
+    }
+  },
+  "trained_model": {
+    "file_path": "checkpoints/trained_model.pkl",
+    "timestamp": "2025-08-07T07:57:04.868399",
+    "metadata": {
+      "model_type": "H2OAutoML",
+      "num_features": 9
+    }
+  },
+  "evaluation_results": {
+    "file_path": "checkpoints/evaluation_results.pkl",
+    "timestamp": "2025-08-07T07:30:21.373934",
+    "metadata": {
+      "has_monthly_performance": true
+    }
+  }
+}

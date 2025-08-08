@@ -88,6 +88,11 @@ def detect_shifting_features(
     """
     logger.info("Detecting shifting features...")
 
+    # Handle empty DataFrame
+    if train_df.empty or config["DATE_COL"] not in train_df.columns:
+        logger.warning("Empty DataFrame or missing date column")
+        return []
+
     # Get monthly data starting from TRAIN_START_DATE
     train_start = pd.to_datetime(config["TRAIN_START_DATE"])
 

@@ -1,0 +1,38 @@
+{
+  "model_info": {
+    "model_type": "H2OStackedEnsembleEstimator",
+    "model_key": "StackedEnsemble_BestOfFamily_1_AutoML_1_20250807_72646",
+    "algorithm": "H2O AutoML Stacked Ensemble"
+  },
+  "performance_metrics": {
+    "training_auc": 0.8269302834641454,
+    "validation_auc": null,
+    "cross_validation_metrics": {
+      "accuracy": {
+        "mean": 0.62522745,
+        "std": 0.04328857
+      },
+      "auc": {
+        "mean": 0.65538037,
+        "std": 0.005709216
+      },
+      "f1": {
+        "mean": 0.3760312,
+        "std": 0.002491755
+      },
+      "precision": {
+        "mean": 0.27811566,
+        "std": 0.015443399
+      },
+      "recall": {
+        "mean": 0.5878883,
+        "std": 0.057735406
+      }
+    }
+  },
+  "model_details": {
+    "total_models_trained": 7,
+    "best_model_rank": 1,
+    "training_time_info": "5 minutes max runtime with early stopping"
+  }
+}
